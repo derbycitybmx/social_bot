@@ -1,0 +1,35 @@
+.ecr_repo_create_base:
+  image:
+    name: public.ecr.aws/aws-cli/aws-cli:2.7.35
+    entrypoint: [""]
+  variables:
+    IMAGE_NAME: $CI_PROJECT_NAME
+  script:
+    - aws ecr describe-repositories --repository-names $IMAGE_NAME || aws ecr create-repository --repository-name $IMAGE_NAME --image-scanning-configuration scanOnPush=true --region us-east-1
+
+.ecr_publish_image_base:
+  tags:
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.2-debug
+    entrypoint: [""]
+  variables:
+    IMAGE_TAG: latest
+    IMAGE_NAME: $CI_PROJECT_NAME
+    DOCKERFILE_PATH: $CI_PROJECT_DIR/$DIRECTORY/Dockerfile
+    KANIKO_EXTRA_ARGS: ""
+  script:
+    - echo "{\"credsStore\":\"ecr-login\"}" > /kaniko/.docker/config.json
+    - echo -e "Publishing the following images/tags to ECR ($ECR_URL):\n\t- $IMAGE_NAME:$VERSION\n\t- $IMAGE_NAME:$IMAGE_TAG"
+    - >-
+      /kaniko/executor 
+      --context $CI_PROJECT_DIR 
+      --build-arg ECR_ENDPOINT="$ECR_URL" 
+      --dockerfile $DOCKERFILE_PATH 
+      --destination "$ECR_URL/$IMAGE_NAME:$VERSION" 
+      --destination "$ECR_URL/$IMAGE_NAME:$IMAGE_TAG" $KANIKO_EXTRA_ARGS
+      --cache=true
+      --cache-repo $ECR_URL/$IMAGE_NAME
+      --cache-ttl 720h0m0s
+      --compressed-caching=false
+      --use-new-run
+      --cleanup

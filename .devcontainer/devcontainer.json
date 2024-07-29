@@ -1,0 +1,6 @@
+{
+    "name": "social-bot",
+    "image": "social-bot:latest",
+    "forwardPorts": [8000],
+    "postCreateCommand": "hatch shell"
+}
